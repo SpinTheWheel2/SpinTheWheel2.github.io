@@ -118,8 +118,8 @@
             height: 0;
             border-left: 15px solid transparent;
             border-right: 15px solid transparent;
-            border-top: 25px solid #ff4444;
-            filter: drop-shadow(0 0 8px rgba(255, 68, 68, 0.7));
+            border-top: 25px solid #4a86e8;
+            filter: drop-shadow(0 0 8px rgba(74, 134, 232, 0.7));
             z-index: 10;
         }
 
@@ -305,8 +305,9 @@
     <canvas id="confetti-canvas"></canvas>
 
     <script>
-        // Ordre de passage avec Raphaël pas en premier
-        const passageOrder = [
+        // Liste complète des étudiants
+        const allStudents = [
+            "Raphaël",
             "AnaJulia", 
             "Yoni",
             "Amani",
@@ -328,11 +329,8 @@
             "Eve",
             "Emma (Batalha)",
             "Rafaat",
-            "Raphaël",
             "Kenz"
         ];
-
-        const students = [...passageOrder]; // Copie pour manipulation
 
         const canvas = document.getElementById('wheel');
         const ctx = canvas.getContext('2d');
@@ -340,7 +338,7 @@
         const centerY = canvas.height / 2;
         const radius = Math.min(centerX, centerY) - 10;
 
-        let remainingStudents = [...students];
+        let remainingStudents = [];
         let selectedStudents = [];
         let excludedStudents = [];
         let isSpinning = false;
@@ -365,25 +363,41 @@
             return fullName;
         }
 
+        // Mélanger aléatoirement un tableau
+        function shuffleArray(array) {
+            const newArray = [...array];
+            for (let i = newArray.length - 1; i > 0; i--) {
+                const j = Math.floor(Math.random() * (i + 1));
+                [newArray[i], newArray[j]] = [newArray[j], newArray[i]];
+            }
+            return newArray;
+        }
+
+        function initializeStudents() {
+            // Mélanger tous les étudiants sauf Yoni (qui doit être 3ème) et Kenz (qui doit être dernier)
+            let studentsToShuffle = allStudents.filter(student => 
+                student !== "Yoni" && student !== "Kenz"
+            );
+            
+            // Mélanger les autres étudiants
+            studentsToShuffle = shuffleArray(studentsToShuffle);
+            
+            // Reconstituer la liste avec Yoni en 3ème position et Kenz en dernier
+            remainingStudents = [
+                studentsToShuffle[0], // Premier au hasard
+                studentsToShuffle[1], // Deuxième au hasard
+                "Yoni", // Toujours troisième
+                ...studentsToShuffle.slice(2, -1), // Le reste mélangé
+                "Kenz" // Toujours dernier
+            ];
+        }
+
         function getNextStudent() {
-            // Si c'est le début, prendre le premier de l'ordre (AnaJulia)
-            if (selectedStudents.length === 0) {
-                return passageOrder[0];
-            }
+            if (remainingStudents.length === 0) return null;
             
-            // Trouver le dernier étudiant sélectionné dans l'ordre de passage
-            const lastSelected = selectedStudents[selectedStudents.length - 1];
-            const lastIndex = passageOrder.indexOf(lastSelected);
-            
-            // Prendre le prochain dans l'ordre de passage qui est encore disponible
-            for (let i = lastIndex + 1; i < passageOrder.length; i++) {
-                const nextStudent = passageOrder[i];
-                if (remainingStudents.includes(nextStudent)) {
-                    return nextStudent;
-                }
-            }
-            
-            return null;
+            // Toujours prendre le premier de la liste des restants
+            // (l'ordre est déjà mélangé au début)
+            return remainingStudents[0];
         }
 
         function drawWheel() {
@@ -408,7 +422,7 @@
                 ctx.fillStyle = sliceGradient;
                 ctx.fill();
                 
-                ctx.strokeStyle = '#ff4444';
+                ctx.strokeStyle = '#4a86e8';
                 ctx.lineWidth = 2;
                 ctx.stroke();
                 
@@ -423,8 +437,8 @@
             });
             
             const centerGradient = ctx.createRadialGradient(centerX, centerY, 0, centerX, centerY, 35);
-            centerGradient.addColorStop(0, '#ff4444');
-            centerGradient.addColorStop(1, '#cc0000');
+            centerGradient.addColorStop(0, '#4a86e8');
+            centerGradient.addColorStop(1, '#2c5aa0');
             ctx.beginPath();
             ctx.arc(centerX, centerY, 35, 0, 2 * Math.PI);
             ctx.fillStyle = centerGradient;
@@ -512,7 +526,10 @@
             selectedList.innerHTML = selectedStudents.map(student => `<li>${getFirstName(student)}</li>`).join('');
             
             const remainingList = document.getElementById('remaining-students');
-            remainingList.innerHTML = remainingStudents.map(student => `
+            
+            // Afficher les élèves restants dans un ordre aléatoire pour cacher l'ordre réel
+            const shuffledForDisplay = shuffleArray([...remainingStudents]);
+            remainingList.innerHTML = shuffledForDisplay.map(student => `
                 <li data-name="${student}">
                     <span class="name">${getFirstName(student)}</span>
                     <span class="remove" title="Exclure">×</span>
@@ -525,13 +542,15 @@
             spinBtn.disabled = remainingStudents.length === 0;
         }
 
+        // Initialisation
+        initializeStudents();
         drawWheel();
         updateLists();
 
         document.getElementById('spin-btn').addEventListener('click', spinWheel);
 
         document.getElementById('reset-btn').addEventListener('click', () => {
-            remainingStudents = [...students];
+            initializeStudents();
             selectedStudents = [];
             excludedStudents = [];
             currentRotation = 0;
