@@ -109,19 +109,18 @@
             display: block;
         }
 
-        .arrow-pointer {
+        .pointer {
             position: absolute;
-            top: -30px;
+            top: -10px;
             left: 50%;
             transform: translateX(-50%);
             width: 0;
             height: 0;
-            border-left: 20px solid transparent;
-            border-right: 20px solid transparent;
-            border-top: 30px solid #4a86e8;
-            filter: drop-shadow(0 0 10px rgba(74, 134, 232, 0.9));
+            border-left: 15px solid transparent;
+            border-right: 15px solid transparent;
+            border-top: 25px solid #ff4444;
+            filter: drop-shadow(0 0 8px rgba(255, 68, 68, 0.7));
             z-index: 10;
-            pointer-events: none;
         }
 
         .notification-container {
@@ -273,7 +272,7 @@
         <main class="main-grid">
             <section class="wheel-area">
                 <div class="wheel-card">
-                    <div class="arrow-pointer"></div>
+                    <div class="pointer"></div>
                     <canvas id="wheel" width="700" height="700"></canvas>
                 </div>
             </section>
@@ -306,31 +305,34 @@
     <canvas id="confetti-canvas"></canvas>
 
     <script>
-        const students = [
-            "ATBJI Ziyad",
-            "AUDIBERT Eve",
-            "AZIANTI Kafui Giovanni",
-            "BATALHA Emma",
-            "CHEHRIT Amani",
-            "COJOCARU Raphaël",
-            "COUTURIER Manon",
-            "D'ESTEVE DE BOSCH Chloé",
-            "EL GUILI Sarah",
-            "GARCIA Jaedee",
-            "GUILLOU Emma",
-            "GUITEL Yoni",
-            "HAISSOUS Kenz",
-            "LAFERRERE Augustin",
-            "LEFEVRE Mathieu",
-            "MEJJATI AGNUS Sawcene",
-            "MILOUD-ALI Hodhaifa",
-            "PARKER Céleste",
-            "PEREIRA DE OLIVEIRA AnaJulia",
-            "RIBEIRO-CANOSSA Andréa",
-            "SOBHY KAMAL Rafaat",
-            "TAMANI Rayan",
-            "ZAAFRANI Emma"
+        // Ordre de passage avec Raphaël pas en premier
+        const passageOrder = [
+            "AnaJulia", 
+            "Yoni",
+            "Amani",
+            "Sarah",
+            "Chloé",
+            "Emma (Zaafrani)",
+            "Hodhaifa",
+            "Andréa",
+            "Jaedee",
+            "Augustin",
+            "Sawcene", 
+            "Manon",
+            "Rayan",
+            "Céleste",
+            "Ziyad",
+            "Emma (Guillou)",
+            "Kafui Giovanni",
+            "Mathieu",
+            "Eve",
+            "Emma (Batalha)",
+            "Rafaat",
+            "Raphaël",
+            "Kenz"
         ];
+
+        const students = [...passageOrder]; // Copie pour manipulation
 
         const canvas = document.getElementById('wheel');
         const ctx = canvas.getContext('2d');
@@ -359,22 +361,28 @@
         resizeConfetti();
         window.addEventListener('resize', resizeConfetti);
 
-        const YONI = 'GUITEL Yoni';
-        const KENZ = 'HAISSOUS Kenz';
-
         function getFirstName(fullName) {
-            return fullName.split(' ').pop();
+            return fullName;
         }
 
-        function computeNextForced() {
-            // When 2 students have been selected, Yoni must be next (3rd)
-            if (selectedStudents.length === 2 && remainingStudents.includes(YONI)) {
-                return YONI;
+        function getNextStudent() {
+            // Si c'est le début, prendre le premier de l'ordre (AnaJulia)
+            if (selectedStudents.length === 0) {
+                return passageOrder[0];
             }
-            // When only 1 student remains, it must be Kenz (the last one)
-            if (remainingStudents.length === 1 && remainingStudents[0] === KENZ) {
-                return KENZ;
+            
+            // Trouver le dernier étudiant sélectionné dans l'ordre de passage
+            const lastSelected = selectedStudents[selectedStudents.length - 1];
+            const lastIndex = passageOrder.indexOf(lastSelected);
+            
+            // Prendre le prochain dans l'ordre de passage qui est encore disponible
+            for (let i = lastIndex + 1; i < passageOrder.length; i++) {
+                const nextStudent = passageOrder[i];
+                if (remainingStudents.includes(nextStudent)) {
+                    return nextStudent;
+                }
             }
+            
             return null;
         }
 
@@ -400,7 +408,7 @@
                 ctx.fillStyle = sliceGradient;
                 ctx.fill();
                 
-                ctx.strokeStyle = '#4a86e8';
+                ctx.strokeStyle = '#ff4444';
                 ctx.lineWidth = 2;
                 ctx.stroke();
                 
@@ -411,14 +419,12 @@
                 ctx.fillStyle = '#ffffff';
                 ctx.font = 'bold 18px Arial';
                 ctx.fillText(getFirstName(student), radius - 30, 5);
-                ctx.shadowColor = 'rgba(74, 134, 232, 0.5)';
-                ctx.shadowBlur = 5;
                 ctx.restore();
             });
             
             const centerGradient = ctx.createRadialGradient(centerX, centerY, 0, centerX, centerY, 35);
-            centerGradient.addColorStop(0, '#4a86e8');
-            centerGradient.addColorStop(1, '#2c5aa0');
+            centerGradient.addColorStop(0, '#ff4444');
+            centerGradient.addColorStop(1, '#cc0000');
             ctx.beginPath();
             ctx.arc(centerX, centerY, 35, 0, 2 * Math.PI);
             ctx.fillStyle = centerGradient;
@@ -432,34 +438,28 @@
             spinBtn.disabled = true;
             isSpinning = true;
 
-            const currentLength = remainingStudents.length;
-            const forced = computeNextForced();
-
-            let selectedIndex;
-            if (forced) {
-                // Force the predetermined student
-                selectedIndex = remainingStudents.indexOf(forced);
-                if (selectedIndex === -1) {
-                    selectedIndex = Math.floor(Math.random() * currentLength);
-                }
-            } else {
-                // Random selection from all remaining students
-                selectedIndex = Math.floor(Math.random() * currentLength);
+            const nextStudent = getNextStudent();
+            
+            if (!nextStudent) {
+                isSpinning = false;
+                spinBtn.disabled = false;
+                showAnnouncement("Aucun élève suivant trouvé", 1000);
+                return;
             }
 
-            // KEY FIX: Calculate the rotation so the arrow lands on the selected student
-            const sliceAngle = (2 * Math.PI) / currentLength;
+            const selectedIndex = remainingStudents.indexOf(nextStudent);
+            
+            if (selectedIndex === -1) {
+                isSpinning = false;
+                spinBtn.disabled = false;
+                showAnnouncement("Erreur: élève non trouvé", 1000);
+                return;
+            }
+
+            const sliceAngle = (2 * Math.PI) / remainingStudents.length;
             const extraSpins = (4 + Math.floor(Math.random() * 3)) * 2 * Math.PI;
-            
-            // The arrow points at the top (0 radians), so we calculate where the selected student should be
-            const studentAngle = selectedIndex * sliceAngle + sliceAngle / 2;
-            
-            // We want: (currentRotation + targetSpin) % (2π) = studentAngle
-            // Solving for targetSpin: targetSpin = extraSpins + (studentAngle - (currentRotation % 2π))
-            const normalizedCurrentRotation = ((currentRotation % (2 * Math.PI)) + 2 * Math.PI) % (2 * Math.PI);
-            const adjustedAngle = studentAngle - normalizedCurrentRotation;
-            
-            targetRotation = currentRotation + extraSpins + adjustedAngle;
+            const stopAngle = (selectedIndex + 0.5) * sliceAngle;
+            targetRotation = currentRotation + extraSpins + stopAngle;
 
             canvas._nextSelectedIndex = selectedIndex;
 
@@ -492,7 +492,9 @@
             spinBtn.disabled = false;
             stopTicking();
             
-            const idx = canvas._nextSelectedIndex;
+            const idx = typeof canvas._nextSelectedIndex === 'number' ? canvas._nextSelectedIndex : Math.floor(remainingStudents.length - 
+                (currentRotation % (2 * Math.PI)) / (2 * Math.PI / remainingStudents.length)) % remainingStudents.length;
+
             const selectedStudent = remainingStudents[idx];
             selectedStudents.push(selectedStudent);
             remainingStudents.splice(idx, 1);
